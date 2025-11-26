@@ -16,27 +16,24 @@ const subjects = createSubjects({
 
 export default {
   fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    // This top section is just for demo purposes. In a real setup another
-    // application would redirect the user to this Worker to be authenticated,
-    // and after signing in or registering the user would be redirected back to
-    // the application they came from. In our demo setup there is no other
-    // application, so this Worker needs to do the initial redirect and handle
-    // the callback redirect on completion.
     const url = new URL(request.url);
-    if (url.pathname === "/") {
-      url.searchParams.set("redirect_uri", url.origin + "/callback");
-      url.searchParams.set("client_id", "your-client-id");
+    
+    // Remove or modify the demo section that's breaking the OAuth flow
+    // The issue is that the demo code is intercepting the callback and returning JSON
+    // instead of letting the OpenAuth issuer handle the OAuth flow properly
+    
+    // Only handle the root path for demo, but don't interfere with OAuth callbacks
+    if (url.pathname === "/" && !url.searchParams.get("redirect_uri")) {
+      // Demo: If someone visits the root without OAuth parameters, show a demo
+      url.searchParams.set("redirect_uri", "http://localhost:3000/auth/callback");
+      url.searchParams.set("client_id", "nextjs-app");
       url.searchParams.set("response_type", "code");
       url.pathname = "/authorize";
       return Response.redirect(url.toString());
-    } else if (url.pathname === "/callback") {
-      return Response.json({
-        message: "OAuth flow complete!",
-        params: Object.fromEntries(url.searchParams.entries()),
-      });
     }
 
     // The real OpenAuth server code starts here:
+    // This will handle ALL OAuth endpoints including /authorize, /token, /userinfo, etc.
     return issuer({
       storage: CloudflareStorage({
         namespace: env.AUTH_STORAGE,
